@@ -1,4 +1,4 @@
-name: Chroma Tests
+name: test
 
 on: [workflow_dispatch]
 
