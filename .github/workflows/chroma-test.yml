@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - team/hypothesis-tests
+      - test_branch
   pull_request:
     branches:
       - main
       - team/hypothesis-tests
+workflow_dispatch
 
 jobs:
   test:
