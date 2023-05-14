@@ -30,7 +30,7 @@ jobs:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ steps.version.outputs.python-version }}-${{ hashFiles('requirements.txt') }}-${{ hashFiles('requirements_dev.txt') }}
         restore-keys: |
-          ${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-${{ steps.version.outputs.python-version }}-
     - name: Install test dependencies
       run: python -m pip install -r requirements.txt && python -m pip install -r requirements_dev.txt
     - name: Test
