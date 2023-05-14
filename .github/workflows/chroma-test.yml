@@ -3,9 +3,7 @@ name: Chroma Tests
 on:
   push:
     branches:
-      - main
       - team/hypothesis-tests
-      - test_branch
   pull_request:
     branches:
       - main
