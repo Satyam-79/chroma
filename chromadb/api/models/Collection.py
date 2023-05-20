@@ -52,12 +52,12 @@ class Collection(BaseModel):
         if embedding_function is not None:
             self._embedding_function = embedding_function
         else:
-            import chromadb.utils.embedding_functions as ef
+            from chromadb.ef import DefaultEmbeddingFunction
 
             logger.warning(
                 "No embedding_function provided, using default embedding function: DefaultEmbeddingFunction https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
             )
-            self._embedding_function = ef.DefaultEmbeddingFunction()
+            self._embedding_function = DefaultEmbeddingFunction()
         super().__init__(name=name, metadata=metadata, id=id)
 
     def __repr__(self) -> str:

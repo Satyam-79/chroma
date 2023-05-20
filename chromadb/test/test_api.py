@@ -6,10 +6,8 @@ import chromadb.server.fastapi
 import pytest
 import tempfile
 import numpy as np
-from chromadb.utils.embedding_functions import (
-    DefaultEmbeddingFunction,
-    ONNXMiniLM_L6_V2,
-)
+from chromadb.ef import DefaultEmbeddingFunction
+from chromadb.ef.onnx_mini_lm_l6_v2 import ONNXMiniLM_L6_V2
 
 
 @pytest.fixture
