@@ -1,8 +1,10 @@
-from typing import TYPE_CHECKING, Optional, cast, List, Tuple, Dict, Union
-from pydantic import BaseModel, PrivateAttr, StrictStr, StrictInt, StrictFloat
+from typing import TYPE_CHECKING, Optional, Tuple, cast, List
+from pydantic import BaseModel, PrivateAttr
 from uuid import UUID
+import chromadb.utils.embedding_functions as ef
 
 from chromadb.api.types import (
+    CollectionMetadata,
     Embedding,
     Include,
     Metadata,
@@ -18,9 +20,11 @@ from chromadb.api.types import (
     maybe_cast_one_to_many,
     validate_ids,
     validate_include,
+    validate_metadata,
     validate_metadatas,
     validate_where,
     validate_where_document,
+    validate_n_results,
     validate_embeddings,
 )
 import logging
@@ -31,10 +35,10 @@ if TYPE_CHECKING:
     from chromadb.api import API
 
 
-class Collection(BaseModel):  # type: ignore
+class Collection(BaseModel):
     name: str
     id: UUID
-    metadata: Optional[Dict[str, Union[StrictStr, StrictInt, StrictFloat]]] = None
+    metadata: Optional[CollectionMetadata] = None
     _client: "API" = PrivateAttr()
     _embedding_function: Optional[EmbeddingFunction] = PrivateAttr()
 
@@ -43,19 +47,11 @@ class Collection(BaseModel):  # type: ignore
         client: "API",
         name: str,
         id: UUID,
-        embedding_function: Optional[EmbeddingFunction] = None,
-        metadata: Optional[Metadata] = None,
+        embedding_function: Optional[EmbeddingFunction] = ef.DefaultEmbeddingFunction(),
+        metadata: Optional[CollectionMetadata] = None,
     ):
         self._client = client
-        if embedding_function is not None:
-            self._embedding_function = embedding_function
-        else:
-            import chromadb.utils.embedding_functions as ef
-
-            logger.warning(
-                "No embedding_function provided, using default embedding function: SentenceTransformerEmbeddingFunction"
-            )
-            self._embedding_function = ef.SentenceTransformerEmbeddingFunction()
+        self._embedding_function = embedding_function
         super().__init__(name=name, metadata=metadata, id=id)
 
     def __repr__(self) -> str:
@@ -81,10 +77,9 @@ class Collection(BaseModel):  # type: ignore
         """Add embeddings to the data store.
         Args:
             ids: The ids of the embeddings you wish to add
-            embedding: The embeddings to add. If None, embeddings will be computed based on the documents using the embedding_function set for the Collection. Optional.
-            metadata: The metadata to associate with the embeddings. When querying, you can filter on this metadata. Optional.
+            embeddings: The embeddings to add. If None, embeddings will be computed based on the documents using the embedding_function set for the Collection. Optional.
+            metadatas: The metadata to associate with the embeddings. When querying, you can filter on this metadata. Optional.
             documents: The documents to associate with the embeddings. Optional.
-            ids: The ids to associate with the embeddings. Optional.
 
         Returns:
             None
@@ -172,7 +167,7 @@ class Collection(BaseModel):  # type: ignore
         Args:
             query_embeddings: The embeddings to get the closes neighbors of. Optional.
             query_texts: The document texts to get the closes neighbors of. Optional.
-            n_results: The number of neighbors to return for each query_embedding or query_text. Optional.
+            n_results: The number of neighbors to return for each query_embedding or query_texts. Optional.
             where: A Where type dict used to filter results by. E.g. `{"color" : "red", "price": 4.20}`. Optional.
             where_document: A WhereDocument type dict used to filter by the documents. E.g. `{$contains: {"text": "hello"}}`. Optional.
             include: A list of what to include in the results. Can contain `"embeddings"`, `"metadatas"`, `"documents"`, `"distances"`. Ids are always included. Defaults to `["metadatas", "documents", "distances"]`. Optional.
@@ -198,6 +193,7 @@ class Collection(BaseModel):  # type: ignore
             maybe_cast_one_to_many(query_texts) if query_texts is not None else None
         )
         include = validate_include(include, allow_distances=True)
+        n_results = validate_n_results(n_results)
 
         # If neither query_embeddings nor query_texts are provided, or both are provided, raise an error
         if (query_embeddings is None and query_texts is None) or (
@@ -234,7 +230,7 @@ class Collection(BaseModel):  # type: ignore
         )
 
     def modify(
-        self, name: Optional[str] = None, metadata: Optional[Metadata] = None
+        self, name: Optional[str] = None, metadata: Optional[CollectionMetadata] = None
     ) -> None:
         """Modify the collection name or metadata
 
@@ -245,6 +241,9 @@ class Collection(BaseModel):  # type: ignore
         Returns:
             None
         """
+        if metadata is not None:
+            validate_metadata(metadata)
+
         self._client._modify(id=self.id, new_name=name, new_metadata=metadata)
         if name:
             self.name = name
@@ -291,6 +290,9 @@ class Collection(BaseModel):  # type: ignore
             embeddings: The embeddings to add. If None, embeddings will be computed based on the documents using the embedding_function set for the Collection. Optional.
             metadatas:  The metadata to associate with the embeddings. When querying, you can filter on this metadata. Optional.
             documents: The documents to associate with the embeddings. Optional.
+
+        Returns:
+            None
         """
 
         ids, embeddings, metadatas, documents = self._validate_embedding_set(
@@ -311,7 +313,7 @@ class Collection(BaseModel):  # type: ignore
         ids: Optional[IDs] = None,
         where: Optional[Where] = None,
         where_document: Optional[WhereDocument] = None,
-    ) -> List[str]:
+    ) -> None:
         """Delete the embeddings based on ids and/or a where filter
 
         Args:
@@ -327,9 +329,9 @@ class Collection(BaseModel):  # type: ignore
         where_document = (
             validate_where_document(where_document) if where_document else None
         )
-        return self._client._delete(self.id, ids, where, where_document)
+        self._client._delete(self.id, ids, where, where_document)
 
-    def create_index(self):  # type: ignore
+    def create_index(self) -> None:
         self._client.create_index(self.name)
 
     def _validate_embedding_set(

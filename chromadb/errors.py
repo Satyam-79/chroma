@@ -18,20 +18,6 @@ class ChromaError(Exception, EnforceOverrides):
         pass
 
 
-class NoDatapointsException(ChromaError):
-    @classmethod
-    @overrides
-    def name(cls) -> str:
-        return "NoDatapoints"
-
-
-class NoIndexException(ChromaError):
-    @classmethod
-    @overrides
-    def name(cls) -> str:
-        return "NoIndex"
-
-
 class InvalidDimensionException(ChromaError):
     @classmethod
     @overrides
@@ -39,11 +25,11 @@ class InvalidDimensionException(ChromaError):
         return "InvalidDimension"
 
 
-class NotEnoughElementsException(ChromaError):
+class InvalidCollectionException(ChromaError):
     @classmethod
     @overrides
     def name(cls) -> str:
-        return "NotEnoughElements"
+        return "InvalidCollection"
 
 
 class IDAlreadyExistsError(ChromaError):
@@ -72,10 +58,8 @@ class InvalidUUIDError(ChromaError):
 
 
 error_types: Dict[str, Type[ChromaError]] = {
-    "NoDatapoints": NoDatapointsException,
-    "NoIndex": NoIndexException,
     "InvalidDimension": InvalidDimensionException,
-    "NotEnoughElements": NotEnoughElementsException,
+    "InvalidCollection": InvalidCollectionException,
     "IDAlreadyExists": IDAlreadyExistsError,
     "DuplicateID": DuplicateIDError,
     "InvalidUUID": InvalidUUIDError,
